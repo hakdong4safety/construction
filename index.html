@@ -2,8 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>사진대지</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1D4A34">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="사진대지">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root{
     --navy:#1D4A34;
@@ -737,6 +746,12 @@
   }
 
   init();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('./sw.js').catch(err=>console.error('SW 등록 실패', err));
+    });
+  }
 })();
 </script>
 </body>

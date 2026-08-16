@@ -1,6 +1,6 @@
 # 사진대지
 
-건설 현장 등에서 매일 촬영하는 사진을 날짜별로 정리하고, 표준 사진대지 양식(엑셀)으로 바로 출력할 수 있는 단일 파일 웹앱입니다.
+건설 현장 등에서 매일 촬영하는 사진을 날짜별로 정리하고, 표준 사진대지 양식(엑셀)으로 바로 출력할 수 있는 PWA(설치 가능한 웹앱)입니다.
 
 ## 주요 기능
 
@@ -13,29 +13,58 @@
   - 브라우저 인쇄 미리보기로 뽑거나
   - 실제 사진대지.xlsx 양식(병합 셀, 테두리, 맑은 고딕 폰트, 22.4cm×35.49cm 용지)을 그대로 재현한 **엑셀 파일**로 내보낼 수 있습니다.
 - **설정**: 현장명 / 작성자 저장.
+- **PWA**: 홈 화면에 앱처럼 설치 가능 (IPARK 아이콘), 서비스워커로 기본 오프라인 화면 캐싱.
 
 ## 기술 스택
 
-- 순수 HTML / CSS / JavaScript (프레임워크 없음, 단일 `index.html` 파일)
+- 순수 HTML / CSS / JavaScript (프레임워크 없음)
+- **Firebase Realtime Database + Anonymous Authentication** — 데이터 저장/동기화
 - [ExcelJS](https://github.com/exceljs/exceljs) — 셀 기반 실제 엑셀(.xlsx) 생성
 - [JSZip](https://stuk.github.io/jszip/) — 생성된 엑셀의 용지 크기 값을 후처리로 보정
+- Web App Manifest + Service Worker — PWA 설치 및 오프라인 앱 셸 캐싱
 
-## ⚠️ 배포 전 꼭 확인하세요 (저장소 관련)
+## ⚠️ 로그인 방식(익명 인증) 관련 주의사항
 
-현재 파일은 Claude 아티팩트 환경 전용 저장소 API(`window.storage`)를 사용합니다. 이는 **claude.ai 안에서만 동작**하며, GitHub Pages 등 일반 웹 호스팅에 그대로 올리면 사진/내용이 저장되지 않습니다.
+익명 인증은 **브라우저(기기)별로 별도 계정**이 생성됩니다.
+- 같은 기기·브라우저에서는 데이터가 계속 유지됩니다.
+- 서로 다른 기기(폰 ↔ PC)에서는 데이터가 공유되지 않습니다.
+- 브라우저 데이터를 지우면 그 기기의 이전 데이터에 다시 접근할 수 없습니다.
 
-GitHub Pages 등 외부에서 독립적으로 사용하려면 저장 방식을 브라우저 `localStorage` (또는 서버/DB)로 교체해야 합니다. 필요하시면 변환된 버전을 요청해 주세요.
+여러 기기에서 같은 데이터를 쓰려면 이메일/구글 로그인 방식으로 전환해야 합니다.
+
+## Firebase 콘솔에서 반드시 설정해야 하는 항목
+
+1. **Realtime Database 규칙**
+   ```json
+   {
+     "rules": {
+       "users": {
+         "$uid": {
+           ".read": "$uid === auth.uid",
+           ".write": "$uid === auth.uid"
+         }
+       }
+     }
+   }
+   ```
+2. **Authentication → Settings → 승인된 도메인**에 배포할 GitHub Pages 주소(예: `아이디.github.io`)를 추가해야 로그인이 막히지 않습니다.
 
 ## GitHub Pages로 배포하는 방법
 
 1. GitHub에서 새 저장소를 만듭니다 (Public).
-2. 이 저장소에 `index.html` 파일을 업로드합니다. (파일명은 반드시 `index.html`)
+2. 아래 **5개 파일을 모두** 저장소 루트에 업로드합니다.
 3. 저장소의 **Settings → Pages**에서 Branch를 `main` / `/(root)`로 설정 후 저장합니다.
 4. 1~2분 후 `https://아이디.github.io/저장소이름/` 주소로 접속하면 앱이 열립니다.
+5. 모바일 브라우저에서 접속 후 "홈 화면에 추가"를 누르면 앱처럼 설치됩니다.
 
 ## 파일 구성
 
 ```
-index.html   # 전체 앱 (HTML + CSS + JS 단일 파일)
-README.md    # 이 문서
+index.html      # 전체 앱 (HTML + CSS + JS)
+manifest.json   # PWA 매니페스트 (앱 이름, 아이콘, 테마 색상)
+sw.js           # 서비스워커 (오프라인 앱 셸 캐싱)
+icon-192.png    # 앱 아이콘 (192x192)
+icon-512.png    # 앱 아이콘 (512x512)
+README.md       # 이 문서
 ```
+
