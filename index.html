@@ -110,6 +110,9 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -118,7 +121,7 @@
     <div class="brand-mark"></div>
     <h1>사진대지</h1>
   </div>
-  <div class="date-row" id="todayLabel">-</div>
+  <div class="date-row"><span id="todayLabel">-</span> · <span id="syncStatus" style="opacity:.85;">연결 중...</span></div>
   <div class="tabs">
     <button class="tab-btn active" data-tab="write">작성</button>
     <button class="tab-btn" data-tab="export">출력</button>
@@ -161,7 +164,56 @@
 
 <script>
 (function(){
-  const SHARED = false;
+  // ---- Firebase (Realtime Database + 익명 인증) ----
+  const firebaseConfig = {
+    apiKey: "AIzaSyD_VigDxlaAgVM3T1qX-Pd_SdzsDWMg44M",
+    authDomain: "construction-b5401.firebaseapp.com",
+    databaseURL: "https://construction-b5401-default-rtdb.firebaseio.com",
+    projectId: "construction-b5401",
+    storageBucket: "construction-b5401.firebasestorage.app",
+    messagingSenderId: "268317705133",
+    appId: "1:268317705133:web:469ea42677fa4862f55724"
+  };
+  let db = null;
+  let currentUid = null;
+
+  function setSyncStatus(text){
+    const el = document.getElementById('syncStatus');
+    if(el) el.textContent = text;
+  }
+
+  // Anonymous auth is per-browser: the same person opening this on a phone
+  // and a PC separately will get two different anonymous accounts and will
+  // NOT see each other's data. Data only persists/syncs within the same
+  // browser (as long as it isn't signed out or its storage isn't cleared).
+  function ensureAuth(){
+    return new Promise((resolve, reject)=>{
+      if(typeof firebase === 'undefined'){
+        reject(new Error('firebase-sdk-not-loaded'));
+        return;
+      }
+      firebase.initializeApp(firebaseConfig);
+      const auth = firebase.auth();
+      db = firebase.database();
+      auth.onAuthStateChanged(user=>{
+        if(user){
+          currentUid = user.uid;
+          setSyncStatus('저장소 연결됨');
+          resolve(user.uid);
+        }
+      });
+      auth.signInAnonymously().catch(err=>{
+        console.error('anonymous sign-in failed', err);
+        setSyncStatus('연결 실패');
+        reject(err);
+      });
+    });
+  }
+
+  function keyToPath(key){
+    return String(key).split(':').join('/');
+  }
+
   let settings = {siteName:'', authorName:''};
   let daysList = [];
   let dayCache = {};
@@ -188,12 +240,24 @@
   function uid(){ return 'set_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
 
   async function storageGet(key){
-    try{ const r = await window.storage.get(key, SHARED); return r ? r.value : null; }
-    catch(e){ return null; }
+    if(!db || !currentUid) return null;
+    try{
+      const snap = await db.ref('users/'+currentUid+'/'+keyToPath(key)).once('value');
+      const v = snap.val();
+      return (v === null || v === undefined) ? null : v;
+    }catch(e){
+      console.error('storage get failed', e);
+      return null;
+    }
   }
   async function storageSet(key, value){
-    try{ await window.storage.set(key, value, SHARED); }
-    catch(e){ console.error('storage set failed', e); toast('저장 중 오류가 발생했습니다'); }
+    if(!db || !currentUid){ toast('저장소에 연결되지 않았습니다'); return; }
+    try{
+      await db.ref('users/'+currentUid+'/'+keyToPath(key)).set(value);
+    }catch(e){
+      console.error('storage set failed', e);
+      toast('저장 중 오류가 발생했습니다');
+    }
   }
 
   async function loadSettings(){
@@ -656,6 +720,14 @@
       await storageSet('settings', JSON.stringify(settings));
       toast('설정이 저장되었습니다');
     };
+
+    try{
+      await ensureAuth();
+    }catch(e){
+      setSyncStatus('연결 실패 - 새로고침 해주세요');
+      toast('저장소 연결에 실패했습니다. 인터넷 연결을 확인해 주세요');
+      return;
+    }
 
     await loadSettings();
     await loadDaysList();
