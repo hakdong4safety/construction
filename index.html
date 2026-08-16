@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사진대지</title>
+<style>
+  :root{
+    --navy:#1D4A34;
+    --navy-2:#276B49;
+    --paper:#F1F4F1;
+    --card:#FFFFFF;
+    --line:#DCE5DC;
+    --amber:#6FBE7A;
+    --amber-dark:#3E9451;
+    --red:#C0392B;
+    --green:#2F7D5A;
+    --text:#1B2126;
+    --text-dim:#66727A;
+    font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--text);}
+  body{padding-bottom:48px;}
+  h1,h2,h3{margin:0;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;}
+
+  .app-header{background:var(--navy);color:#fff;padding:16px 16px 12px;position:sticky;top:0;z-index:50;}
+  .brand{display:flex;align-items:center;gap:9px;}
+  .brand-mark{width:9px;height:22px;background:var(--amber);flex:none;clip-path:polygon(0 0,100% 0,55% 100%,0 100%);}
+  .brand h1{font-size:17px;font-weight:800;letter-spacing:.3px;}
+  .date-row{font-size:12px;color:#B9C6D6;margin-top:3px;margin-left:19px;}
+
+  .tabs{display:flex;gap:6px;margin-top:13px;}
+  .tab-btn{flex:1;padding:9px 4px;border:none;border-radius:8px;background:rgba(255,255,255,.08);color:#CBD6E2;font-size:13px;font-weight:700;transition:.15s;}
+  .tab-btn.active{background:var(--amber);color:#12331E;}
+
+  .container{max-width:760px;margin:0 auto;padding:14px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .day-card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden;}
+  .day-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--navy-2);color:#fff;}
+  .day-head .d{font-size:14.5px;font-weight:800;}
+  .day-head .badge{font-size:11px;background:rgba(255,255,255,.15);padding:3px 8px;border-radius:20px;}
+  .day-head .badge.today{background:var(--amber);color:#12331E;font-weight:800;}
+
+  .set-list{padding:10px 12px 4px;}
+  .set-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);}
+  .set-item:last-child{border-bottom:none;}
+  .set-thumbs{display:flex;gap:4px;flex:none;}
+  .set-thumbs img{width:46px;height:46px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
+  .set-info{flex:1;min-width:0;}
+  .set-info .desc{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .set-info .meta{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
+  .set-del{flex:none;border:none;background:none;color:var(--text-dim);font-size:18px;line-height:1;padding:4px;}
+  .set-del:hover{color:var(--red);}
+
+  .empty-note{padding:16px 14px;font-size:13px;color:var(--text-dim);}
+
+  .add-wrap{padding:10px 12px 12px;}
+  .add-toggle{width:100%;padding:11px;border:1.5px dashed var(--amber-dark);border-radius:9px;background:#EEF8EF;color:var(--amber-dark);font-weight:700;font-size:13.5px;}
+  .add-toggle:active{opacity:.75;}
+
+  .add-form{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#FAFBFC;}
+  .field-label{font-size:12px;font-weight:700;color:var(--text-dim);margin-bottom:5px;display:block;}
+  .field-input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;}
+  select.field-input{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2366727A'><path d='M7 10l5 5 5-5z'/></svg>");background-repeat:no-repeat;background-position:right 10px center;background-size:18px;padding-right:32px;}
+
+  .set-note{font-size:11.5px;color:var(--text-dim);margin:10px 0 6px;}
+  .photo-slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .photo-slot{aspect-ratio:1/1;border:1.5px dashed var(--line);border-radius:9px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#fff;color:var(--text-dim);font-size:12px;text-align:center;}
+  .photo-slot img{width:100%;height:100%;object-fit:cover;}
+  .photo-slot .rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;}
+
+  .form-actions{display:flex;gap:8px;margin-top:12px;}
+  .btn{border:none;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;}
+  .btn-primary{flex:1;background:var(--navy);color:#fff;}
+  .btn-primary:active{background:var(--navy-2);}
+  .btn-ghost{flex:1;background:#EDEFF1;color:var(--text);}
+
+  /* 출력 tab */
+  .export-item{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);}
+  .export-item:last-child{border-bottom:none;}
+  .export-item input[type=checkbox]{width:18px;height:18px;flex:none;}
+  .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+  .toolbar select{padding:8px 10px;border-radius:8px;border:1px solid var(--line);font-size:13px;}
+
+  .print-sheet{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:14px;}
+  .print-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .print-pair img{width:100%;aspect-ratio:4/3;object-fit:cover;border:1px solid #999;}
+  .print-cap{font-size:12.5px;text-align:center;margin-top:4px;color:var(--text-dim);}
+  .print-head{font-size:13px;font-weight:800;margin-bottom:8px;border-bottom:2px solid var(--navy);padding-bottom:6px;}
+
+  /* 설정 tab */
+  .settings-field{margin-bottom:14px;}
+  .settings-field input{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:200;}
+  .toast.show{opacity:.95;}
+
+  @media print{
+    .app-header,.tabs,.add-wrap,.toolbar,.export-item{display:none !important;}
+    body{padding:0;background:#fff;}
+    .container{max-width:100%;padding:0;}
+    .print-sheet{border:none;border-radius:0;page-break-after:always;}
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <h1>사진대지</h1>
+  </div>
+  <div class="date-row" id="todayLabel">-</div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="write">작성</button>
+    <button class="tab-btn" data-tab="export">출력</button>
+    <button class="tab-btn" data-tab="settings">설정</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="panel active" id="panel-write"></div>
+
+  <div class="panel" id="panel-export">
+    <div class="toolbar">
+      <select id="filterDate"><option value="">전체 날짜</option></select>
+      <button class="btn btn-ghost" id="printBtn" style="flex:none;padding:8px 14px;">인쇄 미리보기</button>
+      <button class="btn btn-primary" id="excelBtn" style="flex:none;padding:8px 14px;">엑셀로 내보내기</button>
+    </div>
+    <div class="card" style="padding:0;">
+      <div id="exportList"></div>
+    </div>
+    <div id="printArea"></div>
+  </div>
+
+  <div class="panel" id="panel-settings">
+    <div class="card">
+      <div style="font-size:12.5px;color:var(--text-dim);font-weight:700;margin-bottom:12px;">제작자 : 이상훈M</div>
+      <div class="settings-field">
+        <label class="field-label">현장명</label>
+        <input type="text" id="siteName" placeholder="예) OO 재개발현장">
+      </div>
+      <div class="settings-field">
+        <label class="field-label">작성자</label>
+        <input type="text" id="authorName" placeholder="예) 홍길동">
+      </div>
+      <button class="btn btn-primary" id="saveSettingsBtn">설정 저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const SHARED = false;
+  let settings = {siteName:'', authorName:''};
+  let daysList = [];
+  let dayCache = {};
+  let contentHistory = [];
+  let openFormFor = null;
+  let formPhotos = [null, null];
+
+  function pad(n){ return n<10 ? '0'+n : ''+n; }
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function labelForDate(ds){
+    const d = new Date(ds+'T00:00:00');
+    const w = ['일','월','화','수','목','금','토'][d.getDay()];
+    return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+w+')';
+  }
+  function toast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 1600);
+  }
+  function uid(){ return 'set_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+
+  async function storageGet(key){
+    try{ const r = await window.storage.get(key, SHARED); return r ? r.value : null; }
+    catch(e){ return null; }
+  }
+  async function storageSet(key, value){
+    try{ await window.storage.set(key, value, SHARED); }
+    catch(e){ console.error('storage set failed', e); toast('저장 중 오류가 발생했습니다'); }
+  }
+
+  async function loadSettings(){
+    const raw = await storageGet('settings');
+    if(raw){ try{ settings = JSON.parse(raw); }catch(e){} }
+    document.getElementById('siteName').value = settings.siteName || '';
+    document.getElementById('authorName').value = settings.authorName || '';
+  }
+
+  async function loadDaysList(){
+    const raw = await storageGet('days-list');
+    if(raw){ try{ daysList = JSON.parse(raw); }catch(e){ daysList = []; } }
+    else{ daysList = []; }
+  }
+  async function saveDaysList(){
+    await storageSet('days-list', JSON.stringify(daysList));
+  }
+  async function loadDay(ds){
+    if(dayCache[ds]) return dayCache[ds];
+    const raw = await storageGet('day:'+ds);
+    let day = {date:ds, sets:[]};
+    if(raw){ try{ day = JSON.parse(raw); }catch(e){} }
+    dayCache[ds] = day;
+    return day;
+  }
+  async function saveDay(day){
+    dayCache[day.date] = day;
+    await storageSet('day:'+day.date, JSON.stringify(day));
+  }
+
+  // Content history: remembers previously typed 내용 values so they can be
+  // quickly reselected next time, most-recently-used first.
+  async function loadContentHistory(){
+    const raw = await storageGet('content-history');
+    if(raw){ try{ contentHistory = JSON.parse(raw); }catch(e){ contentHistory = []; } }
+    else{ contentHistory = []; }
+  }
+  async function addContentHistory(v){
+    if(!v) return;
+    contentHistory = contentHistory.filter(x=>x !== v);
+    contentHistory.unshift(v);
+    if(contentHistory.length > 50) contentHistory = contentHistory.slice(0,50);
+    await storageSet('content-history', JSON.stringify(contentHistory));
+  }
+
+  // Ensure today's section exists exactly once (no duplicates when the date rolls over)
+  async function ensureToday(){
+    const t = todayStr();
+    if(!daysList.includes(t)){
+      daysList.push(t);
+      daysList.sort();
+      await saveDaysList();
+    }
+    await loadDay(t);
+  }
+
+  function resizeImage(file, maxDim){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        const img = new Image();
+        img.onload = ()=>{
+          let w = img.width, h = img.height;
+          if(w > h){ if(w > maxDim){ h = Math.round(h*maxDim/w); w = maxDim; } }
+          else{ if(h > maxDim){ w = Math.round(w*maxDim/h); h = maxDim; } }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- 작성 (write) tab ----------
+  async function renderWrite(){
+    const wrap = document.getElementById('panel-write');
+    wrap.innerHTML = '';
+    if(daysList.length === 0){
+      wrap.innerHTML = '<div class="empty-note">아직 등록된 날짜가 없습니다.</div>';
+      return;
+    }
+    const t = todayStr();
+    for(const ds of daysList){
+      const day = await loadDay(ds);
+      const isToday = ds === t;
+      const card = document.createElement('div');
+      card.className = 'day-card';
+
+      const head = document.createElement('div');
+      head.className = 'day-head';
+      head.innerHTML = '<span class="d">'+labelForDate(ds)+'</span>'
+        + '<span class="badge'+(isToday?' today':'')+'">'+(isToday?'오늘':(day.sets.length+'세트'))+'</span>';
+      card.appendChild(head);
+
+      const list = document.createElement('div');
+      list.className = 'set-list';
+      if(day.sets.length === 0){
+        list.innerHTML = '<div class="empty-note" style="padding:10px 2px;">등록된 사진대지가 없습니다.</div>';
+      } else {
+        day.sets.forEach((s)=>{
+          const item = document.createElement('div');
+          item.className = 'set-item';
+          const thumbs = (s.photos||[]).filter(Boolean).map(p=>'<img src="'+p+'">').join('');
+          const label = [s.location, s.content].filter(Boolean).join(' · ') || '(내용 없음)';
+          item.innerHTML = '<div class="set-thumbs">'+thumbs+'</div>'
+            + '<div class="set-info"><div class="desc">'+escapeHtml(label)+'</div>'
+            + '<div class="meta">1 set · 사진 '+(s.photos||[]).filter(Boolean).length+'장</div></div>'
+            + (isToday ? '<button class="set-del" data-id="'+s.id+'" data-date="'+ds+'">✕</button>' : '');
+          list.appendChild(item);
+        });
+      }
+      card.appendChild(list);
+
+      if(isToday){
+        const addWrap = document.createElement('div');
+        addWrap.className = 'add-wrap';
+        if(openFormFor === ds){
+          addWrap.appendChild(buildForm(ds));
+        } else {
+          const btn = document.createElement('button');
+          btn.className = 'add-toggle';
+          btn.textContent = '+ 사진대지 추가하기';
+          btn.onclick = ()=>{ openFormFor = ds; formPhotos = [null,null]; renderWrite(); };
+          addWrap.appendChild(btn);
+        }
+        card.appendChild(addWrap);
+      }
+
+      wrap.appendChild(card);
+    }
+
+    // delete handlers
+    wrap.querySelectorAll('.set-del').forEach(b=>{
+      b.onclick = async ()=>{
+        if(!confirm('이 사진대지 세트를 삭제할까요?')) return;
+        const ds = b.dataset.date, id = b.dataset.id;
+        const day = await loadDay(ds);
+        day.sets = day.sets.filter(s=>s.id !== id);
+        await saveDay(day);
+        renderWrite();
+      };
+    });
+  }
+
+  function escapeHtml(s){
+    return (s+'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function buildForm(ds){
+    const box = document.createElement('div');
+    box.className = 'add-form';
+    const historyOptions = contentHistory.map(v=>'<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>').join('');
+    box.innerHTML = '<label class="field-label">위치</label>'
+      + '<input type="text" class="field-input" id="locInput" placeholder="예) 3층 A동">'
+      + '<label class="field-label" style="margin-top:10px;">내용</label>'
+      + '<select class="field-input" id="contentSelect">'
+      + '<option value="__custom__">직접 입력</option>'
+      + historyOptions
+      + '</select>'
+      + '<input type="text" class="field-input" id="contentCustomInput" placeholder="예시) 00검측" style="margin-top:6px;">'
+      + '<div class="set-note">1 set = 사진 2장</div>'
+      + '<div class="photo-slots" id="slotWrap"></div>'
+      + '<div class="form-actions">'
+      + '<button class="btn btn-ghost" id="cancelBtn">취소</button>'
+      + '<button class="btn btn-primary" id="saveBtn">저장</button>'
+      + '</div>';
+
+    setTimeout(()=>{
+      const slotWrap = box.querySelector('#slotWrap');
+      renderSlots(slotWrap, ds);
+      const sel = box.querySelector('#contentSelect');
+      const customInp = box.querySelector('#contentCustomInput');
+      function syncCustomVisibility(){
+        customInp.style.display = sel.value === '__custom__' ? '' : 'none';
+      }
+      syncCustomVisibility();
+      sel.onchange = syncCustomVisibility;
+      box.querySelector('#cancelBtn').onclick = ()=>{ openFormFor = null; formPhotos=[null,null]; renderWrite(); };
+      box.querySelector('#saveBtn').onclick = ()=>{
+        const location = box.querySelector('#locInput').value.trim();
+        const content = sel.value === '__custom__' ? customInp.value.trim() : sel.value;
+        handleSave(ds, location, content);
+      };
+    }, 0);
+    return box;
+  }
+
+  function renderSlots(slotWrap, ds){
+    slotWrap.innerHTML = '';
+    for(let i=0;i<2;i++){
+      const slot = document.createElement('div');
+      slot.className = 'photo-slot';
+      if(formPhotos[i]){
+        slot.innerHTML = '<img src="'+formPhotos[i]+'"><button class="rm" data-i="'+i+'">✕</button>';
+      } else {
+        slot.innerHTML = '사진 '+(i+1)+'<input type="file" accept="image/*" data-i="'+i+'" style="position:absolute;inset:0;opacity:0;">';
+      }
+      slotWrap.appendChild(slot);
+    }
+    slotWrap.querySelectorAll('input[type=file]').forEach(inp=>{
+      inp.onchange = async (e)=>{
+        const f = e.target.files[0];
+        if(!f) return;
+        const i = parseInt(inp.dataset.i);
+        try{
+          formPhotos[i] = await resizeImage(f, 1000);
+          renderSlots(slotWrap, ds);
+        }catch(err){ toast('사진을 불러오지 못했습니다'); }
+      };
+    });
+    slotWrap.querySelectorAll('.rm').forEach(rm=>{
+      rm.onclick = ()=>{
+        formPhotos[parseInt(rm.dataset.i)] = null;
+        renderSlots(slotWrap, ds);
+      };
+    });
+  }
+
+  async function handleSave(ds, location, content){
+    const photos = formPhotos.filter(Boolean);
+    if(photos.length === 0 && !location && !content){
+      toast('위치, 내용 또는 사진을 입력해 주세요');
+      return;
+    }
+    const day = await loadDay(ds);
+    day.sets.push({ id: uid(), location, content, photos: formPhotos.slice() });
+    await saveDay(day);
+    if(content){ await addContentHistory(content); }
+    openFormFor = null;
+    formPhotos = [null,null];
+    toast('저장되었습니다');
+    renderWrite();
+  }
+
+  // ---------- 출력 (export) tab ----------
+  async function renderExport(){
+    const sel = document.getElementById('filterDate');
+    sel.innerHTML = '<option value="">전체 날짜</option>' + daysList.slice().reverse().map(ds=>'<option value="'+ds+'">'+labelForDate(ds)+'</option>').join('');
+
+    const list = document.getElementById('exportList');
+    list.innerHTML = '';
+    const filter = sel.value;
+    let any = false;
+    for(const ds of daysList.slice().reverse()){
+      if(filter && filter !== ds) continue;
+      const day = await loadDay(ds);
+      day.sets.forEach(s=>{
+        any = true;
+        const row = document.createElement('div');
+        row.className = 'export-item';
+        const thumbs = (s.photos||[]).filter(Boolean).map(p=>'<img src="'+p+'" style="width:34px;height:34px;object-fit:cover;border-radius:5px;">').join('');
+        const label = [s.location, s.content].filter(Boolean).join(' · ') || '(내용 없음)';
+        row.innerHTML = '<input type="checkbox" class="expChk" data-date="'+ds+'" data-id="'+s.id+'">'
+          + '<div style="display:flex;gap:4px;">'+thumbs+'</div>'
+          + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">'+escapeHtml(label)+'</div>'
+          + '<div style="font-size:11px;color:var(--text-dim);">'+labelForDate(ds)+'</div></div>';
+        list.appendChild(row);
+      });
+    }
+    if(!any){ list.innerHTML = '<div class="empty-note">표시할 사진대지가 없습니다.</div>'; }
+  }
+
+  async function buildPrintPreview(){
+    const checks = Array.from(document.querySelectorAll('.expChk:checked'));
+    if(checks.length === 0){ toast('인쇄할 항목을 선택해 주세요'); return; }
+    const printArea = document.getElementById('printArea');
+    printArea.innerHTML = '';
+    for(const c of checks){
+      const ds = c.dataset.date, id = c.dataset.id;
+      const day = await loadDay(ds);
+      const s = day.sets.find(x=>x.id===id);
+      if(!s) continue;
+      const sheet = document.createElement('div');
+      sheet.className = 'print-sheet';
+      const photos = (s.photos||[]).filter(Boolean);
+      const label = [s.location, s.content].filter(Boolean).join(' · ');
+      const imgs = [0,1].map(i=> photos[i]
+        ? '<div><img src="'+photos[i]+'"><div class="print-cap">'+escapeHtml(label)+'</div></div>'
+        : '<div></div>').join('');
+      sheet.innerHTML = '<div class="print-head">'+(settings.siteName||'현장')+' · '+labelForDate(ds)+'</div>'
+        + '<div class="print-pair">'+imgs+'</div>';
+      printArea.appendChild(sheet);
+    }
+    window.print();
+  }
+
+  // ---------- 엑셀 내보내기 (사진대지.xlsx 양식 그대로 재현) ----------
+  function sanitizeSheetName(name){
+    let s = (name||'sheet').replace(/[\\\/\?\*\[\]:]/g, '_');
+    if(s.length > 31) s = s.slice(0,31);
+    return s || 'sheet';
+  }
+
+  function dataUrlExt(dataUrl){
+    if(dataUrl.startsWith('data:image/png')) return 'png';
+    return 'jpeg';
+  }
+
+  async function generateExcel(items){
+    if(typeof ExcelJS === 'undefined'){
+      toast('엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요');
+      return;
+    }
+    const workbook = new ExcelJS.Workbook();
+
+    // Custom paper size matching the office 사진대지.xlsx template: 22.4cm x 35.49cm
+    const MARGIN_IN = 0.2;
+
+    function commonPageSetup(ws){
+      ws.views = [{ showGridLines:false }];
+      ws.pageSetup = {
+        paperWidth: '22.4cm',
+        paperHeight: '35.49cm',
+        orientation: 'portrait',
+        fitToPage: true, fitToWidth: 1, fitToHeight: 1,
+        margins: { left:MARGIN_IN, right:MARGIN_IN, top:MARGIN_IN, bottom:MARGIN_IN, header:0, footer:0 },
+        printArea: 'B1:J43',
+        showGridLines: false,
+        showRowColHeaders: false
+      };
+    }
+
+    function boxBorder(ws, r1, c1, r2, c2){
+      for(let r=r1;r<=r2;r++){
+        for(let c=c1;c<=c2;c++){
+          ws.getCell(r,c).border = { top:{style:'thin'}, bottom:{style:'thin'}, left:{style:'thin'}, right:{style:'thin'} };
+        }
+      }
+    }
+
+    const titleStyle = { name:'맑은 고딕', size:20 };
+    const capStyle = { name:'맑은 고딕', size:11 };
+    const centerMid = { horizontal:'center', vertical:'middle', wrapText:true };
+    const usedNames = new Set();
+
+    items.forEach((item, idx)=>{
+      let base = sanitizeSheetName(item.name || ('sheet'+(idx+1)));
+      let sheetName = base, n = 2;
+      while(usedNames.has(sheetName)){
+        sheetName = sanitizeSheetName(base.slice(0,28) + '_' + n);
+        n++;
+      }
+      usedNames.add(sheetName);
+
+      const ws = workbook.addWorksheet(sheetName);
+      ws.properties.defaultRowHeight = 17.4;
+      ws.getColumn(1).width = 1.5;
+      commonPageSetup(ws);
+
+      ws.mergeCells('B1:J2');
+      ws.mergeCells('B3:J19');
+      ws.mergeCells('B20:J21');
+      ws.mergeCells('B23:J24');
+      ws.mergeCells('B25:J41');
+      ws.mergeCells('B42:J43');
+      boxBorder(ws, 1,2,2,10);
+      boxBorder(ws, 3,2,19,10);
+      boxBorder(ws, 20,2,21,10);
+      boxBorder(ws, 23,2,24,10);
+      boxBorder(ws, 25,2,41,10);
+      boxBorder(ws, 42,2,43,10);
+
+      const c1 = ws.getCell('B1'); c1.value = '사 진 대 지'; c1.font = titleStyle; c1.alignment = centerMid;
+      const c2 = ws.getCell('B23'); c2.value = '사 진 대 지'; c2.font = titleStyle; c2.alignment = centerMid;
+
+      const capText = item.capText;
+      const photos = item.photos;
+      if(photos[0]){
+        const cc1 = ws.getCell('B20'); cc1.value = capText; cc1.font = capStyle; cc1.alignment = centerMid;
+        const base64 = photos[0].split(',')[1];
+        const imgId = workbook.addImage({ base64, extension: dataUrlExt(photos[0]) });
+        ws.addImage(imgId, { tl:{col:1,row:2}, br:{col:10,row:19} });
+      }
+      if(photos[1]){
+        const cc2 = ws.getCell('B42'); cc2.value = capText; cc2.font = capStyle; cc2.alignment = centerMid;
+        const base64 = photos[1].split(',')[1];
+        const imgId = workbook.addImage({ base64, extension: dataUrlExt(photos[1]) });
+        ws.addImage(imgId, { tl:{col:1,row:24}, br:{col:10,row:41} });
+      }
+    });
+
+    const buf = await workbook.xlsx.writeBuffer();
+    // ExcelJS silently drops paperWidth/paperHeight from pageSetup, so patch
+    // the generated worksheet XML directly to embed the real 22.4cm x 35.49cm size.
+    const patched = await patchPaperSize(buf, '22.4cm', '35.49cm');
+    const blob = new Blob([patched], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '사진대지_'+todayStr()+'.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function patchPaperSize(buffer, widthCm, heightCm){
+    if(typeof JSZip === 'undefined') return buffer; // fall back silently if CDN failed
+    const zip = await JSZip.loadAsync(buffer);
+    const sheetFiles = Object.keys(zip.files).filter(f => /^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+    for(const f of sheetFiles){
+      let xml = await zip.file(f).async('string');
+      if(xml.includes('<pageSetup')){
+        xml = xml.replace(/<pageSetup([^\/>]*)\/>/, (m, attrs)=>{
+          return '<pageSetup' + attrs + ' paperHeight="' + heightCm + '" paperWidth="' + widthCm + '"/>';
+        });
+        zip.file(f, xml);
+      }
+    }
+    return await zip.generateAsync({type:'arraybuffer'});
+  }
+
+  async function handleExcelExport(){
+    const checks = Array.from(document.querySelectorAll('.expChk:checked'));
+    if(checks.length === 0){ toast('내보낼 항목을 선택해 주세요'); return; }
+    const items = [];
+    for(const c of checks){
+      const ds = c.dataset.date, id = c.dataset.id;
+      const day = await loadDay(ds);
+      const s = day.sets.find(x=>x.id===id);
+      if(!s) continue;
+      const [yy,mm,dd] = ds.split('-');
+      const shortYY = yy.slice(2);
+      const locContent = [s.location, s.content].filter(Boolean).join(' ');
+      const capText = shortYY+'.'+mm+'.'+dd+' '+locContent;
+      items.push({
+        name: shortYY+mm+dd+'_'+(locContent || '세트').slice(0,10),
+        capText,
+        photos: (s.photos||[])
+      });
+    }
+    toast('엑셀 생성 중...');
+    await generateExcel(items);
+  }
+
+  // ---------- tabs ----------
+  function switchTab(name){
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-'+name).classList.add('active');
+    if(name === 'export') renderExport();
+  }
+
+  async function init(){
+    document.getElementById('todayLabel').textContent = labelForDate(todayStr());
+    document.querySelectorAll('.tab-btn').forEach(b=>{
+      b.onclick = ()=> switchTab(b.dataset.tab);
+    });
+    document.getElementById('filterDate').onchange = renderExport;
+    document.getElementById('printBtn').onclick = buildPrintPreview;
+    document.getElementById('excelBtn').onclick = handleExcelExport;
+    document.getElementById('saveSettingsBtn').onclick = async ()=>{
+      settings.siteName = document.getElementById('siteName').value.trim();
+      settings.authorName = document.getElementById('authorName').value.trim();
+      await storageSet('settings', JSON.stringify(settings));
+      toast('설정이 저장되었습니다');
+    };
+
+    await loadSettings();
+    await loadDaysList();
+    await loadContentHistory();
+    await ensureToday();
+    await renderWrite();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
